@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shopping Cart</title>
+
+<style>
+body { font-family: Arial; margin:0; }
+header { background:#333; color:#fff; padding:15px; text-align:center; }
+
+nav {
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  background:#eee;
+  padding:10px;
+}
+nav a {
+  font-weight:bold;
+  cursor:pointer;
+  text-decoration:none;
+  color:black;
+}
+
+nav a.disabled {
+  color:gray;
+  pointer-events:none;
+}
+
+.form-box {
+  max-width:350px;
+  margin:30px auto;
+  border:1px solid #ccc;
+  padding:20px;
+}
+
+input, button {
+  width:100%;
+  padding:8px;
+  margin:6px 0;
+}
+
+.link {
+  color:blue;
+  text-decoration:underline;
+  cursor:pointer;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:20px;
+  padding:20px;
+}
+
+.item {
+  border:1px solid #ccc;
+  padding:10px;
+  text-align:center;
+}
+
+.item img {
+  width:100%;
+  height:150px;
+  object-fit:cover;
+}
+
+.cart-box {
+  max-width:600px;
+  margin:20px auto;
+}
+
+.cart-item {
+  display:grid;
+  grid-template-columns: 2fr 1fr 2fr 1fr;
+  align-items:center;
+  border-bottom:1px solid #ccc;
+  padding:10px 0;
+}
+
+.qty-btn {
+  width:auto;
+  padding:4px 8px;
+}
+
+@media(max-width:768px){
+  nav { flex-direction:column; }
+}
+
+</style>
+</head>
+
+<body>
+
+<header><h2>Shopping Cart</h2></header>
+
+<nav>
+  
+  <a id="navLogin" onclick="showPage('login')">Login</a>
+  <a id="navRegister" onclick="showPage('register')">Register</a>
+  <a id="navCatalog" class="disabled" onclick="showPage('catalog')">Catalog</a>
+  <a id="navCart" class="disabled" onclick="showPage('cart')">Cart</a>
+  <a id="navLogout" class="disabled" onclick="logout()">Logout</a>
+</nav>
+
+<!-- REGISTER -->
+<div id="register" class="page" style="display:none">
+  <div class="form-box">
+    <h3>Register</h3>
+    <input id="regUser" placeholder="Username">
+    <input id="regPass" type="password" placeholder="Password">
+    <button onclick="register()">Register</button>
+    <p id="regMsg"></p>
+    <p>Already have an account?
+      <span class="link" onclick="showPage('login')">Login</span>
+    </p>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login" class="page">
+  <div class="form-box">
+    <h3>Login</h3>
+    <input id="logUser" placeholder="Username">
+    <input id="logPass" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <p id="logMsg"></p>
+    <p>New user?
+      <span class="link" onclick="showPage('register')">Create an account</span>
+    </p>
+  </div>
+</div>
+
+<!-- CATALOG -->
+<div id="catalog" class="page" style="display:none">
+  <h3 style="text-align:center">Products</h3>
+  <div class="grid" id="productGrid"></div>
+</div>
+
+<!-- CART -->
+<div id="cart" class="page" style="display:none">
+  <h3 style="text-align:center">Your Cart</h3>
+  <div class="cart-box" id="cartList"></div>
+  <h3 style="text-align:center">Total: Rs <span id="totalAmount">0</span></h3>
+</div>
+
+<script>
+let isLoggedIn = false;
+let cart = [];
+
+// ---------- PAGE CONTROL ----------
+function showPage(p) {
+  if (!isLoggedIn && (p === 'catalog' || p === 'cart')) {
+    alert("Please login first");
+    p = 'login';
+  }
+  document.querySelectorAll('.page').forEach(x => x.style.display = 'none');
+  document.getElementById(p).style.display = 'block';
+  if (p === 'cart') loadCart();
+}
+
+// ---------- REGISTER ----------
+function register() {
+  let username = regUser.value.trim();
+  let password = regPass.value.trim();
+
+  // ---- CLIENT SIDE VALIDATION ----
+   if (username === "" && password === "") {
+    regMsg.innerText = "Username and Password are required";
+    return;
+  }
+  if (username === "") {
+    regMsg.innerText = "Username is required";
+    return;
+  }
+
+  if (username.length < 3) {
+    regMsg.innerText = "Username must be at least 3 characters";
+    return;
+  }
+
+  if (password === "") {
+    regMsg.innerText = "Password is required";
+    return;
+  }
+
+  if (password.length < 6) {
+    regMsg.innerText = "Password must be at least 6 characters";
+    return;
+  }
+  // ---- END VALIDATION ----
+
+  localStorage.setItem("user", username);
+  localStorage.setItem("pass", password);
+
+  regUser.value = "";
+  regPass.value = "";
+  regMsg.innerText = "Registered successfully. Please login.";
+
+  showPage('login');
+  
+}
+
+// ---------- LOGIN ----------
+function login() {
+ // ---- CLIENT SIDE VALIDATION ----
+  if (logUser.value.trim() === "") {
+    logMsg.innerText = "Username is required";
+    return;
+  }
+
+  if (logPass.value.trim() === "") {
+    logMsg.innerText = "Password is required";
+    return;
+  }
+  // ---- END VALIDATION ----  
+  if (
+    logUser.value === localStorage.getItem("user") &&
+    logPass.value === localStorage.getItem("pass")
+    ) {
+    isLoggedIn = true;
+
+    navRegister.classList.add("disabled");
+    navLogin.classList.add("disabled");
+    navCatalog.classList.remove("disabled");
+    navCart.classList.remove("disabled");
+    navLogout.classList.remove('disabled');
+
+    logUser.value = "";
+    logPass.value = "";
+    logMsg.innerText = "";
+
+    showPage('catalog');
+  } else {
+    logMsg.innerText = "Invalid credentials";
+  }
+}
+
+// ---------- LOGOUT ----------
+function logout() {
+  isLoggedIn = false;
+  cart = [];
+
+  navRegister.classList.remove("disabled");
+  navLogin.classList.remove("disabled");
+  navCatalog.classList.add("disabled");
+  navCart.classList.add("disabled");
+  navLogout.classList.add('disabled');
+
+
+  alert("Logged out");
+  showPage('login');
+}
+
+// ---------- PRODUCTS ----------
+let products=[
+  
+  {id:1, name:'Men Shorts', price:1199, img:'https://images.pexels.com/photos/769749/pexels-photo-769749.jpeg'},
+ {id:2, name:'Women Shirts', price:1199, img:'https://images.pexels.com/photos/3775087/pexels-photo-3775087.jpeg'},
+  {id:3, name:'Running Shoes', price:1200, img:'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg'},
+  {id:4, name:'Sports Shoes', price:1500, img:'https://images.pexels.com/photos/19090/pexels-photo.jpg'},
+  {id:5, name:'Casual Shoes', price:900, img:'https://images.pexels.com/photos/2529147/pexels-photo-2529147.jpeg'},
+  {id:6, name:'Mobile A', price:12000, img:'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg'},
+  {id:7, name:'Mobile B', price:15000, img:'https://images.pexels.com/photos/1334597/pexels-photo-1334597.jpeg'},
+  {id:8, name:'Mobile C', price:18000, img:'https://images.pexels.com/photos/699122/pexels-photo-699122.jpeg'},
+  {id:9, name:'Laptop A', price:42000, img:'https://images.pexels.com/photos/18105/pexels-photo.jpg'},
+  {id:10, name:'Laptop B', price:55000, img:'https://images.pexels.com/photos/374074/pexels-photo-374074.jpeg'}
+];
+
+products.forEach(p => {
+  let d = document.createElement("div");
+  d.className = "item";
+  d.innerHTML = `
+    <img src="${p.img}">
+    <h4>${p.name}</h4>
+    <p>Rs ${p.price}</p>
+    <button onclick="addToCart(${p.id})">Add to Cart</button>
+  `;
+  productGrid.appendChild(d);
+});
+
+// ---------- CART ----------
+function addToCart(id) {
+  let item = cart.find(c => c.id === id);
+  if (item) {
+    item.qty++;
+  } else {
+    let p = products.find(p => p.id === id);
+    cart.push({ id:p.id, name:p.name, price:p.price, qty:1 });
+   alert(p.name + " added to cart");
+  }
+   
+}
+
+function loadCart() {
+  cartList.innerHTML = "";
+  let grandTotal = 0;
+
+  cart.forEach((c, i) => {
+    cartList.innerHTML += `
+      <div class="cart-item">
+        <span>${c.name}</span>
+        <span>Rs ${c.price}</span>
+        <div>
+          <button class="qty-btn" onclick="changeQty(${i},-1)">-</button>
+          ${c.qty}
+          <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
+        </div>
+        <button onclick="removeItem(${i})">X</button>
+      </div>
+    `;
+    grandTotal += c.price * c.qty;
+  });
+
+  document.getElementById("totalAmount").innerText = grandTotal;
+}
+
+function changeQty(i, val) {
+  cart[i].qty += val;
+  if (cart[i].qty <= 0) cart.splice(i, 1);
+  loadCart();
+}
+
+function removeItem(i) {
+  cart.splice(i, 1);
+  loadCart();
+}
+
+// ---------- DEFAULT ----------
+showPage('login');
+</script>
+
+</body>
+</html>
